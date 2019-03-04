@@ -1,4 +1,4 @@
-package com.youyud.demo;
+package com.youyud.demo.es;
 
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -10,13 +10,16 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class QueryFactory {
 
     /**
      * 针对geo_point类型的查找，查询符合多边形内的数据
+     *
      * @param field
      * @param points
      * @return
@@ -36,19 +39,20 @@ public class QueryFactory {
     /**
      * 针对geo_point类型
      * 获取在指定矩形框内的数据
-     * @param field 字段
+     *
+     * @param field  字段
      * @param point1 矩形左上边界
      * @param point2 矩形右下边界
      * @return
      * @throws Exception
      */
-    public SearchSourceBuilder builtBoundingBoxQuery(String field, GeoPoint point1,GeoPoint point2) throws Exception {
+    public SearchSourceBuilder builtBoundingBoxQuery(String field, GeoPoint point1, GeoPoint point2) throws Exception {
         if (point1 == null || point2 == null) {
             throw new Exception("bad args of geo points");
         }
         SearchSourceBuilder srb = new SearchSourceBuilder();
         GeoBoundingBoxQueryBuilder qb = QueryBuilders.geoBoundingBoxQuery(field)
-                .setCorners(point2,point1);
+                .setCorners(point2, point1);
         srb.query(qb);
         return srb;
     }
@@ -56,13 +60,14 @@ public class QueryFactory {
     /**
      * 针对geo_point类型
      * 查找在给定的中心点确定范围内的数据
+     *
      * @param field
      * @param distance
      * @param point
      * @return
      * @throws Exception
      */
-    public SearchSourceBuilder builtDistanceQuery( String field,String distance, GeoPoint point) throws Exception {
+    public SearchSourceBuilder builtDistanceQuery(String field, String distance, GeoPoint point) throws Exception {
         if (point == null) {
             throw new Exception("bad args of geo points");
         }
@@ -71,7 +76,7 @@ public class QueryFactory {
                 .point(point)
                 .distance(distance, DistanceUnit.KILOMETERS);
         srb.query(qb);
-        GeoDistanceSortBuilder sort = SortBuilders.geoDistanceSort(field,point)
+        GeoDistanceSortBuilder sort = SortBuilders.geoDistanceSort(field, point)
                 .order(SortOrder.ASC)
                 .unit(DistanceUnit.KILOMETERS);
         srb.sort(sort);
