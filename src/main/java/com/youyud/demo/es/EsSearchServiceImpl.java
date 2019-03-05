@@ -9,6 +9,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -71,9 +72,36 @@ public class EsSearchServiceImpl implements EsSearchService {
      * @throws Exception
      */
     @Override
-    public List<Map<String, Object>> searchGeoDistance(String index, String type, String field, String distance, GeoPoint point) throws Exception {
-        SearchSourceBuilder builder = factory.builtDistanceQuery(field, distance, point);
-        return search(index, type, builder);
+    public List<Map<String, Object>> searchGeoDistance(RequestBean bean, Pageable pageable) throws Exception {
+        SearchSourceBuilder builder = factory.builtDistanceQuery(bean.getField(), bean.getDistance(), bean.getPoint());
+
+        try {
+            List<Map<String, Object>> list = new ArrayList<>();
+            SearchRequestBuilder srb = transportClient.prepareSearch(bean.getIndex());
+            if (bean.getType() != null && bean.getType().length() != 0) {
+                srb.setTypes(bean.getType());
+            }
+            srb.setSource(builder).setFrom(pageable.getPageNumber()).setSize(pageable.getPageSize());
+            SearchResponse searchResponse = srb.execute().actionGet();
+            SearchHits hits = searchResponse.getHits();
+            long time = searchResponse.getTookInMillis();
+            log.info("query result size:" + hits.totalHits + ",spend time:" + time + "s");
+            for (SearchHit hit : hits) {
+                Map<String, Object> map = hit.getSource();
+                //获取distance数据时，获取距离具体值
+                if (hit.getSortValues().length != 0) {
+                    BigDecimal geoDis = new BigDecimal((Double) hit.getSortValues()[0]);
+                    map.put("distance", geoDis.setScale(4, BigDecimal.ROUND_HALF_DOWN) + "km");
+                }
+                list.add(map);
+                log.info("hits:" + map);
+            }
+            return list;
+        } catch (Exception e) {
+            log.error("error!", e);
+        }
+        return null;
+//        return search(bean.getIndex(), bean.getType(), builder);
     }
 
     /**
